@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
+import '../src/lib/supabase';
+
 export default function Index() {
   return (
     <View style={styles.container}>

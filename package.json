@@ -4,6 +4,8 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/ui": "~58.0.20",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.118.0",
     "expo": "~58.0.14",
     "expo-constants": "~58.0.12",
     "expo-device": "~58.0.5",
@@ -24,6 +26,7 @@
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
+    "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "~0.21.4",
     "react-native-worklets": "0.13.0"
   },
@@ -37,7 +40,11 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "db:push": "bash scripts/db-push.sh",
+    "db:reset:dev": "bash scripts/db-reset-dev.sh",
+    "db:types": "bash scripts/db-types.sh",
+    "db:test": "bash scripts/db-test.sh"
   },
   "private": true
 }
