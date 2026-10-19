@@ -244,6 +244,10 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+[auth.email.template.recovery]
+subject = "Reset your password"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
@@ -394,6 +398,15 @@ verify_jwt = true
 
 [functions.end-session]
 verify_jwt = true
+
+[functions.send-invite]
+verify_jwt = true
+
+[functions.fx-refresh]
+verify_jwt = false
+
+[functions.statement-reminders]
+verify_jwt = false
 
 [analytics]
 enabled = true

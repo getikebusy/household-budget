@@ -7,16 +7,23 @@ type TextFieldProps = TextInputProps & {
   error?: string;
 };
 
-export function TextField({ label, error, style, ...rest }: TextFieldProps) {
+export function TextField({ label, error, style, accessibilityLabel, editable = true, ...rest }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
         {...rest}
+        editable={editable}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={{ disabled: editable === false }}
         placeholderTextColor={colors.muted}
-        style={[styles.input, error ? styles.inputError : null, style]}
+        style={[styles.input, editable === false ? styles.locked : null, error ? styles.inputError : null, style]}
       />
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.error}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -43,6 +50,10 @@ const styles = StyleSheet.create({
   },
   inputError: {
     borderColor: colors.danger,
+  },
+  locked: {
+    backgroundColor: colors.bg,
+    color: colors.muted,
   },
   error: {
     fontFamily: typography.family[400],

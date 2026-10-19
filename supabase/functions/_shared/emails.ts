@@ -40,6 +40,31 @@ export function loginCodeEmail(code: string, displayName?: string): EmailContent
   };
 }
 
+export function statementReminderEmail(input: {
+  cardName: string;
+  statementDate: string;
+  balance: string;
+  limit: string;
+  utilisation: string;
+  payToCeiling: string;
+  ceiling: string;
+  payToIdeal: string;
+  ideal: string;
+}): EmailContent {
+  const card = escapeHtml(input.cardName.replace(/[\r\n]+/g, " ").trim());
+  const date = escapeHtml(input.statementDate);
+
+  return {
+    subject: `Pay down ${input.cardName.replace(/[\r\n]+/g, " ").trim()} before ${input.statementDate}`,
+    html: layout(`
+      <p style="margin:0 0 16px;font-size:16px;">Pay down <strong>${card}</strong> before ${date}.</p>
+      <p style="margin:0 0 16px;font-size:15px;">Balance ${escapeHtml(input.balance)} of a ${escapeHtml(input.limit)} limit (${escapeHtml(input.utilisation)} utilisation).</p>
+      <p style="margin:0 0 8px;font-size:15px;">Pay ${escapeHtml(input.payToCeiling)} to get under the ${escapeHtml(input.ceiling)} ceiling.</p>
+      <p style="margin:0;font-size:15px;">Pay ${escapeHtml(input.payToIdeal)} to reach the ${escapeHtml(input.ideal)} ideal level.</p>
+    `),
+  };
+}
+
 export function inviteEmail(inviterName: string, link: string): EmailContent {
   const safeName = escapeHtml(inviterName);
   const safeLink = escapeHtml(link);

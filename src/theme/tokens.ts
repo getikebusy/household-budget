@@ -15,11 +15,14 @@ export const colors = {
   badText: '#8C1D18',
   warnBg: '#FDF4E7',
   warnText: '#5A2C06',
+  heroMint: '#7FD1A8',
+  heroTrack: '#2C3D36',
 } as const;
 
 export const radius = {
   input: 12,
   card: 20,
+  hero: 22,
 } as const;
 
 export const spacing = {
@@ -29,6 +32,7 @@ export const spacing = {
   16: 16,
   20: 20,
   24: 24,
+  28: 28,
   32: 32,
 } as const;
 

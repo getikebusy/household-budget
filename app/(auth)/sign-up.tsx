@@ -9,7 +9,7 @@ import { AuthCard } from '../../src/components/auth-card';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
-import { sendLoginCode } from '../../src/data/auth';
+import { beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
 import { emailSchema, friendlyAuthError, passwordSchema } from '../../src/lib/auth-schema';
 import { supabase } from '../../src/lib/supabase';
 import { colors, typography } from '../../src/theme/tokens';
@@ -40,11 +40,13 @@ export default function SignUpScreen() {
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
+    beginLoginVerification();
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
     });
     if (error) {
+      cancelLoginVerification();
       setFormError(friendlyAuthError(error));
       return;
     }

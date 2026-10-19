@@ -17,6 +17,7 @@ export function PrimaryButton({ title, loading, disabled, onPress }: PrimaryButt
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
+      accessibilityState={{ disabled: isDisabled, busy: Boolean(loading) }}
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,

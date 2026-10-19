@@ -1,5 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import type { Session } from '@supabase/supabase-js';
 
 import { queryClient } from '../lib/query-client';
@@ -21,19 +29,73 @@ export class AuthFlowError extends Error {
   }
 }
 
-export function useSession(): { session: Session | null; isLoading: boolean } {
+type SessionValue = { session: Session | null; isLoading: boolean };
+
+const SessionContext = createContext<SessionValue | null>(null);
+
+let awaitingLoginCode = false;
+let recoveringPassword = false;
+
+export function beginLoginVerification() {
+  awaitingLoginCode = true;
+}
+
+export function cancelLoginVerification() {
+  awaitingLoginCode = false;
+}
+
+export function isAwaitingLoginCode() {
+  return awaitingLoginCode;
+}
+
+export function beginPasswordRecovery() {
+  recoveringPassword = true;
+}
+
+export function cancelPasswordRecovery() {
+  recoveringPassword = false;
+}
+
+export function isRecoveringPassword() {
+  return recoveringPassword;
+}
+
+export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!cancelled) {
-        setSession(data.session);
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (cancelled) {
+        return;
       }
-    });
+      if (!data.session) {
+        setSession(null);
+        return;
+      }
+      const { error } = await supabase.auth.getUser();
+      if (cancelled) {
+        return;
+      }
+      if (error) {
+        cancelLoginVerification();
+        await supabase.auth.signOut();
+        if (!cancelled) {
+          setSession(null);
+        }
+        return;
+      }
+      setSession(data.session);
+    })();
 
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data } = supabase.auth.onAuthStateChange((event, next) => {
+      if (event === 'PASSWORD_RECOVERY' && !isRecoveringPassword()) {
+        void supabase.auth.signOut();
+        setSession(null);
+        return;
+      }
       setSession(next);
     });
 
@@ -43,7 +105,20 @@ export function useSession(): { session: Session | null; isLoading: boolean } {
     };
   }, []);
 
-  return { session: session ?? null, isLoading: session === undefined };
+  const value = useMemo<SessionValue>(
+    () => ({ session: session ?? null, isLoading: session === undefined }),
+    [session],
+  );
+
+  return createElement(SessionContext.Provider, { value }, children);
+}
+
+export function useSession(): SessionValue {
+  const ctx = useContext(SessionContext);
+  if (!ctx) {
+    throw new Error('useSession must be used within SessionProvider');
+  }
+  return ctx;
 }
 
 export function useSessionVerified() {
@@ -58,7 +133,7 @@ export function useSessionVerified() {
       }
       return data === true;
     },
-    enabled: Boolean(session),
+    enabled: Boolean(session) && !isRecoveringPassword(),
   });
 }
 
@@ -93,7 +168,7 @@ async function readFunctionError(error: unknown): Promise<FunctionErrorPayload |
   }
 }
 
-async function invokeFunction<T>(name: string, body?: Record<string, unknown>): Promise<T> {
+export async function invokeFunction<T>(name: string, body?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke(name, body ? { body } : undefined);
   if (!error) {
     return data as T;
@@ -102,12 +177,66 @@ async function invokeFunction<T>(name: string, body?: Record<string, unknown>): 
   throw new AuthFlowError(payload?.error ?? error.message, payload);
 }
 
+export async function requestPasswordReset(email: string): Promise<void> {
+  beginPasswordRecovery();
+  await supabase.auth.resetPasswordForEmail(email);
+}
+
+export async function completePasswordReset(params: {
+  email: string;
+  token: string;
+  password: string;
+}): Promise<void> {
+  beginPasswordRecovery();
+  const { error: verifyError } = await supabase.auth.verifyOtp({
+    email: params.email,
+    token: params.token,
+    type: 'recovery',
+  });
+  if (verifyError) {
+    throw new AuthFlowError('That code is invalid or has expired.');
+  }
+  const { error: updateError } = await supabase.auth.updateUser({ password: params.password });
+  if (updateError) {
+    throw updateError;
+  }
+  await signOut();
+}
+
+export async function abandonPasswordRecovery(): Promise<void> {
+  cancelPasswordRecovery();
+  await supabase.auth.signOut();
+  queryClient.clear();
+}
+
 export async function sendLoginCode(): Promise<{ sent?: boolean; alreadyVerified?: boolean }> {
-  return invokeFunction('send-login-otp');
+  beginLoginVerification();
+  try {
+    const result = await invokeFunction<{ sent?: boolean; alreadyVerified?: boolean }>('send-login-otp');
+    if (result.alreadyVerified) {
+      cancelLoginVerification();
+    }
+    return result;
+  } catch (error) {
+    const payload = (error as AuthFlowError).payload;
+    if (payload?.error !== 'wait' && payload?.error !== 'too_many') {
+      cancelLoginVerification();
+    }
+    throw error;
+  }
 }
 
 export async function verifyLoginCode(code: string): Promise<{ verified: boolean }> {
-  return invokeFunction('verify-login-otp', { code });
+  const result = await invokeFunction<{ verified: boolean }>('verify-login-otp', { code });
+  cancelLoginVerification();
+  return result;
+}
+
+export async function clearLocalSession(): Promise<void> {
+  cancelLoginVerification();
+  cancelPasswordRecovery();
+  await supabase.auth.signOut();
+  queryClient.clear();
 }
 
 export async function signOut(): Promise<void> {
@@ -116,8 +245,7 @@ export async function signOut(): Promise<void> {
   } catch {
     // Always clear the local session even if the Edge Function fails.
   }
-  await supabase.auth.signOut();
-  queryClient.clear();
+  await clearLocalSession();
 }
 
 export const passwordSchemaMessage =

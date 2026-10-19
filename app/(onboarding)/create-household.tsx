@@ -1,37 +1,152 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { router, type Href } from 'expo-router';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
+import { StyleSheet, Text } from 'react-native';
+import { z } from 'zod';
 
+import { AuthCard } from '../../src/components/auth-card';
 import { PrimaryButton } from '../../src/components/primary-button';
-import { signOut } from '../../src/data/auth';
-import { colors, spacing, typography } from '../../src/theme/tokens';
+import { TextField } from '../../src/components/text-field';
+import { createHousehold } from '../../src/data/household';
+import { colors, typography } from '../../src/theme/tokens';
+
+const cadAmount = z
+  .string()
+  .trim()
+  .min(1, 'Enter an amount')
+  .refine((value) => Number.isFinite(Number(value.replace(/,/g, ''))), 'Enter a number')
+  .transform((value) => Number(value.replace(/,/g, '')))
+  .refine((value) => value >= 0, 'Must be 0 or more');
+
+const schema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, 'Enter a display name')
+    .max(30, 'Use 30 characters or fewer'),
+  takeHomeCad: cadAmount,
+  rentTotalCad: cadAmount,
+  householdName: z.string().trim().max(80, 'Use 80 characters or fewer'),
+});
+
+type FormInput = z.input<typeof schema>;
+type FormOutput = z.output<typeof schema>;
 
 export default function CreateHouseholdScreen() {
+  const [formError, setFormError] = useState<string | null>(null);
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<FormInput, unknown, FormOutput>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      displayName: '',
+      takeHomeCad: '',
+      rentTotalCad: '',
+      householdName: 'Our household',
+    },
+  });
+
+  async function onSubmit(values: FormOutput) {
+    setFormError(null);
+    try {
+      await createHousehold({
+        displayName: values.displayName,
+        takeHomeCad: values.takeHomeCad,
+        rentTotalCad: values.rentTotalCad,
+        householdName: values.householdName || 'Our household',
+      });
+      router.replace('/' as Href);
+    } catch {
+      setFormError('Could not create the household. Please try again.');
+    }
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Create your household</Text>
-      <Text style={styles.subtitle}>Onboarding continues in the next step.</Text>
-      <PrimaryButton title="Sign out" onPress={() => void signOut()} />
-    </View>
+    <AuthCard title="Create your household" subtitle="Set up how you share money together.">
+      <Text style={styles.note}>You'll be the primary account and manage household settings.</Text>
+      <Text style={styles.note}>Your take-home pay is private to you.</Text>
+      <Controller
+        control={control}
+        name="displayName"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextField
+            label="Display name"
+            autoCapitalize="words"
+            textContentType="nickname"
+            placeholder="Odogwu"
+            value={value}
+            onBlur={onBlur}
+            onChangeText={onChange}
+            error={errors.displayName?.message}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="takeHomeCad"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextField
+            label="Monthly take-home pay (CAD)"
+            keyboardType="decimal-pad"
+            placeholder="0"
+            value={value}
+            onBlur={onBlur}
+            onChangeText={onChange}
+            error={errors.takeHomeCad?.message}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="rentTotalCad"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextField
+            label="Total monthly rent (CAD)"
+            keyboardType="decimal-pad"
+            placeholder="0"
+            value={value}
+            onBlur={onBlur}
+            onChangeText={onChange}
+            error={errors.rentTotalCad?.message}
+          />
+        )}
+      />
+      <Controller
+        control={control}
+        name="householdName"
+        render={({ field: { onChange, onBlur, value } }) => (
+          <TextField
+            label="Household name (optional)"
+            placeholder="Our household"
+            value={value}
+            onBlur={onBlur}
+            onChangeText={onChange}
+            error={errors.householdName?.message}
+          />
+        )}
+      />
+      {formError ? <Text style={styles.error}>{formError}</Text> : null}
+      <PrimaryButton
+        title="Create household"
+        loading={isSubmitting}
+        onPress={handleSubmit(onSubmit)}
+      />
+    </AuthCard>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing[24],
-    gap: spacing[16],
-  },
-  title: {
-    fontFamily: typography.family[800],
-    fontSize: typography.size[26],
-    color: colors.ink,
-  },
-  subtitle: {
+  note: {
     fontFamily: typography.family[400],
-    fontSize: typography.size[15],
+    fontSize: typography.size[14],
     color: colors.muted,
-    textAlign: 'center',
+  },
+  error: {
+    fontFamily: typography.family[500],
+    fontSize: typography.size[13],
+    color: colors.danger,
   },
 });

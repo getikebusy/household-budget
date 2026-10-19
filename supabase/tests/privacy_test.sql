@@ -555,6 +555,99 @@ begin
 end
 $assert$;
 
+reset role;
+
+-- 11. Every ordinary table in public has row level security.
+do $assert$
+declare
+  missing text;
+begin
+  select string_agg(c.relname, ', ' order by c.relname)
+    into missing
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public'
+     and c.relkind = 'r'
+     and not c.relrowsecurity;
+  if missing is not null then
+    raise exception 'FAIL: RLS is off for public table(s): %', missing;
+  end if;
+
+  select string_agg(tablename, ', ' order by tablename)
+    into missing
+    from pg_tables
+   where schemaname = 'public'
+     and not rowsecurity;
+  if missing is not null then
+    raise exception 'FAIL: pg_tables reports RLS off for: %', missing;
+  end if;
+end
+$assert$;
+
+-- 12. Authenticated clients cannot read login codes or verified sessions.
+insert into public.login_otps (user_id, session_id, code_hash, expires_at)
+select p_id, p_sess, repeat('a', 64), now() + interval '10 minutes'
+  from test_ids;
+
+do $assert$
+declare
+  r test_ids%rowtype;
+  n int;
+begin
+  select * into strict r from test_ids;
+  perform set_config('role', 'authenticated', true);
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object(
+      'sub', r.p_id::text,
+      'session_id', r.p_sess::text,
+      'email', r.p_email,
+      'role', 'authenticated'
+    )::text,
+    true
+  );
+
+  begin
+    select count(*) into n from public.login_otps;
+    if n <> 0 then
+      raise exception 'FAIL: authenticated read % login_otps row(s)', n;
+    end if;
+  exception
+    when insufficient_privilege then
+      null;
+  end;
+
+  begin
+    select count(*) into n from public.verified_sessions;
+    if n <> 0 then
+      raise exception 'FAIL: authenticated read % verified_sessions row(s)', n;
+    end if;
+  exception
+    when insufficient_privilege then
+      null;
+  end;
+end
+$assert$;
+reset role;
+
+-- 13. The anon role cannot execute any function in public.
+do $assert$
+declare
+  fn text;
+begin
+  select string_agg(format('%I(%s)', p.proname, pg_get_function_identity_arguments(p.oid)), ', ' order by p.proname)
+    into fn
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public'
+     and p.prokind = 'f'
+     and has_function_privilege('anon', p.oid, 'execute');
+  if fn is not null then
+    raise exception 'FAIL: anon can execute %', fn;
+  end if;
+end
+$assert$;
+
 select 'ALL PRIVACY TESTS PASSED';
 
 reset role;

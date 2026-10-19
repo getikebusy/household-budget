@@ -9,7 +9,7 @@ import { AuthCard } from '../../src/components/auth-card';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
-import { sendLoginCode } from '../../src/data/auth';
+import { beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
 import { emailSchema, friendlyAuthError } from '../../src/lib/auth-schema';
 import { supabase } from '../../src/lib/supabase';
 import { colors, radius, spacing, typography } from '../../src/theme/tokens';
@@ -35,11 +35,13 @@ export default function SignInScreen() {
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
+    beginLoginVerification();
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
     if (error) {
+      cancelLoginVerification();
       setFormError(friendlyAuthError(error));
       return;
     }
@@ -62,7 +64,7 @@ export default function SignInScreen() {
   return (
     <AuthCard title="Sign in" subtitle="Household Budget">
       {params.reset === '1' ? (
-        <Text style={styles.success}>Your password was updated. Sign in with your new password.</Text>
+        <Text style={styles.success}>Password updated. Please sign in.</Text>
       ) : null}
       <Controller
         control={control}
