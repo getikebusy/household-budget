@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "household-budget",
+    "name": "Household Budget",
     "slug": "household-budget",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
+      "bundler": "metro",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
