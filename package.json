@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/plus-jakarta-sans": "^0.4.2",
     "@expo/ui": "~58.0.20",
+    "@hookform/resolvers": "^5.9.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.118.0",
+    "@tanstack/react-query": "^5.104.4",
     "expo": "~58.0.14",
     "expo-constants": "~58.0.12",
     "expo-device": "~58.0.5",
@@ -21,17 +24,24 @@
     "expo-web-browser": "~58.0.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-hook-form": "^7.90.0",
     "react-native": "0.88.0",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0",
     "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "~0.21.4",
-    "react-native-worklets": "0.13.0"
+    "react-native-worklets": "0.13.0",
+    "zod": "^4.6.7",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@types/jest": "30.0.0",
     "@types/react": "~19.3.0",
+    "jest": "~30.5.2",
+    "jest-expo": "~58.0.11",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -41,10 +51,19 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "test": "jest",
     "db:push": "bash scripts/db-push.sh",
     "db:reset:dev": "bash scripts/db-reset-dev.sh",
     "db:types": "bash scripts/db-types.sh",
-    "db:test": "bash scripts/db-test.sh"
+    "db:test": "bash scripts/db-test.sh",
+    "check": "npx tsc --noEmit && npx jest && npm run db:test",
+    "build:web": "npx expo export --platform web"
   },
-  "private": true
+  "private": true,
+  "jest": {
+    "preset": "jest-expo",
+    "transformIgnorePatterns": [
+      "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg)"
+    ]
+  }
 }
