@@ -1,6 +1,6 @@
 import { StyleSheet, Text } from 'react-native';
 
-import { formatCAD, formatCADWhole } from '../lib/money';
+import { useDisplayCurrency } from '../data/display-currency';
 import { colors, typography } from '../theme/tokens';
 
 type MoneyTextProps = {
@@ -11,7 +11,8 @@ type MoneyTextProps = {
 };
 
 export function MoneyText({ value, size, weight, whole = false }: MoneyTextProps) {
-  const text = whole ? formatCADWhole(value) : formatCAD(value);
+  const { format } = useDisplayCurrency();
+  const text = format(value, { whole });
 
   return (
     <Text

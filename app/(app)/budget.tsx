@@ -8,13 +8,14 @@ import { CollapsibleSection } from '../../src/components/collapsible-section';
 import { MonthSwitcher } from '../../src/components/month-switcher';
 import { ProgressBar } from '../../src/components/progress-bar';
 import { SegmentedControl } from '../../src/components/segmented-control';
+import { useDisplayCurrency } from '../../src/data/display-currency';
 import { useBucketOpen } from '../../src/data/budget-open';
 import { useBudgetLines, useCategories } from '../../src/data/budget-lines';
 import { useMonth } from '../../src/data/month';
 import { useMonthSummary, type MonthSummaryCategory } from '../../src/data/summary';
 import { useView } from '../../src/data/view';
 import { bucketStatus, type BudgetBucket, type BucketStatus } from '../../src/lib/budget';
-import { formatCAD, formatPercent } from '../../src/lib/money';
+import { formatPercent } from '../../src/lib/money';
 import { colors, radius, spacing, typography } from '../../src/theme/tokens';
 
 const BUCKETS: { id: BudgetBucket; name: string; color: string }[] = [
@@ -35,6 +36,7 @@ function usedLabel(spent: number, planned: number) {
 }
 
 export default function BudgetScreen() {
+  const { format: formatAmount } = useDisplayCurrency();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const month = useMonth((state) => state.month);
@@ -78,10 +80,10 @@ export default function BudgetScreen() {
         {summary.data ? (
           <>
             <View style={styles.tiles}>
-              <StatTile label="Budgeted income" value={formatCAD(income)} />
-              <StatTile label="Allocated" value={formatCAD(allocated)} />
-              <StatTile label="Spent so far" value={formatCAD(spent)} />
-              <StatTile label="Unallocated" value={formatCAD(unallocated)} negative={unallocated < 0} />
+              <StatTile label="Budgeted income" value={formatAmount(income)} />
+              <StatTile label="Allocated" value={formatAmount(allocated)} />
+              <StatTile label="Spent so far" value={formatAmount(spent)} />
+              <StatTile label="Unallocated" value={formatAmount(unallocated)} negative={unallocated < 0} />
             </View>
             {BUCKETS.map((bucket) => {
               const rows = summary.data.categories.filter((category) => category.bucket === bucket.id);
@@ -170,6 +172,7 @@ function BucketHeader({
   share: number;
   status: BucketStatus;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   return (
     <View style={styles.bucketHeader}>
       <View style={styles.bucketTitle}>
@@ -180,7 +183,7 @@ function BucketHeader({
         {count} {count === 1 ? 'category' : 'categories'}
       </Text>
       <Text style={styles.bucketMeta}>
-        {formatCAD(planned)} · {formatPercent(share, 1)} of income
+        {formatAmount(planned)} · {formatPercent(share, 1)} of income
       </Text>
       <Chip tone={statusTone(status)} label={status} />
     </View>
@@ -198,13 +201,14 @@ function CategoryRow({
   editable: boolean;
   onEdit: () => void;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const used = row.planned > 0 ? row.spent / row.planned : row.spent > 0 ? 1.01 : 0;
   const body = (
     <View style={styles.phoneRow}>
       <View style={styles.phoneTop}>
         <Text style={styles.categoryName}>{row.name}</Text>
         <Text style={styles.categoryMoney}>
-          {formatCAD(row.spent)} / {formatCAD(row.planned)}
+          {formatAmount(row.spent)} / {formatAmount(row.planned)}
         </Text>
       </View>
       <ProgressBar value={used} color={color} accessibilityLabel={`${row.name} progress`} />
@@ -231,6 +235,7 @@ function BucketTable({
   editable: boolean;
   onEdit: (id: string) => void;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false}>
       <View style={styles.table}>
@@ -247,9 +252,9 @@ function BucketTable({
           const content = (
             <>
               <Text style={[styles.cell, styles.colName]}>{row.name}</Text>
-              <Text style={[styles.cell, styles.colMoney]}>{formatCAD(row.planned)}</Text>
-              <Text style={[styles.cell, styles.colMoney]}>{formatCAD(row.spent)}</Text>
-              <Text style={[styles.cell, styles.colMoney, left < 0 ? styles.negative : null]}>{formatCAD(left)}</Text>
+              <Text style={[styles.cell, styles.colMoney]}>{formatAmount(row.planned)}</Text>
+              <Text style={[styles.cell, styles.colMoney]}>{formatAmount(row.spent)}</Text>
+              <Text style={[styles.cell, styles.colMoney, left < 0 ? styles.negative : null]}>{formatAmount(left)}</Text>
               <View style={styles.colProgress}>
                 <View style={styles.bar}>
                   <ProgressBar value={used} color={color} accessibilityLabel={`${row.name} progress`} />

@@ -18,6 +18,7 @@ import { ProgressBar } from '../../src/components/progress-bar';
 import { SecondaryButton } from '../../src/components/secondary-button';
 import { SegmentedControl } from '../../src/components/segmented-control';
 import { Skeleton } from '../../src/components/skeleton';
+import { useDisplayCurrency } from '../../src/data/display-currency';
 import { useCreditAccounts, useCreditLogs } from '../../src/data/credit';
 import { useMembers, useMyMembership } from '../../src/data/household';
 import { formatMonthTitle, useMonth } from '../../src/data/month';
@@ -26,7 +27,7 @@ import { useFeed, useMonthSummary, type MonthSummary } from '../../src/data/summ
 import { useView, type BudgetView } from '../../src/data/view';
 import { bucketStatus, type BudgetBucket, type BucketStatus } from '../../src/lib/budget';
 import { creditUtilisation, soonestStatement } from '../../src/lib/credit';
-import { formatCAD, formatPercent } from '../../src/lib/money';
+import { formatPercent } from '../../src/lib/money';
 import { colors, radius, spacing, typography } from '../../src/theme/tokens';
 
 const BUCKETS: { id: BudgetBucket; name: string; color: string; aim: 'max' | 'aim' }[] = [
@@ -164,6 +165,7 @@ export default function OverviewScreen() {
 }
 
 function Hero({ summary, wide }: { summary: MonthSummary; wide: boolean }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const planned = summary.categories.reduce((sum, category) => sum + category.planned, 0);
   const spent = summary.categories.reduce((sum, category) => sum + category.spent, 0);
   const left = planned - spent;
@@ -172,7 +174,7 @@ function Hero({ summary, wide }: { summary: MonthSummary; wide: boolean }) {
   return (
     <View style={styles.hero}>
       <Text style={styles.heroLabel}>Left to spend this month</Text>
-      <Text style={[styles.heroAmount, wide ? styles.heroAmountWide : null]}>{formatCAD(left)}</Text>
+      <Text style={[styles.heroAmount, wide ? styles.heroAmountWide : null]}>{formatAmount(left)}</Text>
       <View
         accessibilityRole="progressbar"
         accessibilityLabel="Spent against planned"
@@ -181,9 +183,9 @@ function Hero({ summary, wide }: { summary: MonthSummary; wide: boolean }) {
         <View style={[styles.heroFill, { width: `${Math.min(Math.max(used, 0), 1) * 100}%` }]} />
       </View>
       <View style={styles.heroStats}>
-        <HeroStat label="Budgeted income" value={formatCAD(summary.budgeted_income)} />
-        <HeroStat label="Planned" value={formatCAD(planned)} />
-        <HeroStat label="Spent" value={formatCAD(spent)} />
+        <HeroStat label="Budgeted income" value={formatAmount(summary.budgeted_income)} />
+        <HeroStat label="Planned" value={formatAmount(planned)} />
+        <HeroStat label="Spent" value={formatAmount(spent)} />
       </View>
     </View>
   );
@@ -247,6 +249,7 @@ function BucketBlock({
     status: BucketStatus;
   };
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const used = bucket.planned > 0 ? bucket.spent / bucket.planned : bucket.spent > 0 ? 1.01 : 0;
   const targetPercent = Math.round(bucket.target * 100);
   return (
@@ -256,9 +259,9 @@ function BucketBlock({
         <Text style={styles.bucketName}>{bucket.name}</Text>
         <Chip tone={statusTone(bucket.status)} label={bucket.status} />
       </View>
-      <Text style={styles.bucketAmount}>{formatCAD(bucket.planned)}</Text>
+      <Text style={styles.bucketAmount}>{formatAmount(bucket.planned)}</Text>
       <ProgressBar value={used} color={bucket.color} accessibilityLabel={`${bucket.name} progress`} />
-      <Text style={styles.bucketMeta}>{formatCAD(bucket.spent)} spent</Text>
+      <Text style={styles.bucketMeta}>{formatAmount(bucket.spent)} spent</Text>
       <Text style={styles.bucketMeta}>
         {formatPercent(bucket.share, 1)} · {bucket.aim} {targetPercent}%
       </Text>
@@ -277,6 +280,7 @@ function Recent({
   failed: boolean;
   onRetry: () => void;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   return (
     <Card style={styles.cardBody}>
       <View style={styles.recentHeader}>
@@ -297,7 +301,7 @@ function Recent({
         </View>
       ) : null}
       {rows.map((row) => {
-        const amount = row.type === 'income' ? `+${formatCAD(row.view_amount_cad)}` : formatCAD(row.view_amount_cad);
+        const amount = row.type === 'income' ? `+${formatAmount(row.view_amount_cad)}` : formatAmount(row.view_amount_cad);
         const body = (
           <>
             <FeedAvatar scope={row.scope} name={row.owner_name} mine={row.is_mine} />
@@ -381,6 +385,7 @@ function JointCard({
   members: { display_name: string; role: 'primary' | 'partner'; joint_share: number }[];
   jointTotal: number;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const primary = members.find((member) => member.role === 'primary');
   const partner = members.find((member) => member.role === 'partner');
   const primaryShare = primary?.joint_share ?? 0.5;
@@ -389,14 +394,14 @@ function JointCard({
   return (
     <Card style={styles.cardBody}>
       <Text style={styles.cardTitle}>Joint costs</Text>
-      <Text style={styles.bucketMeta}>Total rent {formatCAD(rent)}</Text>
+      <Text style={styles.bucketMeta}>Total rent {formatAmount(rent)}</Text>
       <Text style={styles.jointLine}>
-        {primary?.display_name ?? 'Primary'} {Math.round(primaryShare * 100)}% · {formatCAD(rent * primaryShare)}
+        {primary?.display_name ?? 'Primary'} {Math.round(primaryShare * 100)}% · {formatAmount(rent * primaryShare)}
       </Text>
       <Text style={styles.jointLine}>
-        {partner?.display_name ?? 'Partner'} {Math.round(partnerShare * 100)}% · {formatCAD(rent * partnerShare)}
+        {partner?.display_name ?? 'Partner'} {Math.round(partnerShare * 100)}% · {formatAmount(rent * partnerShare)}
       </Text>
-      <Text style={styles.bucketMeta}>Logged as Joint this month {formatCAD(jointTotal)}</Text>
+      <Text style={styles.bucketMeta}>Logged as Joint this month {formatAmount(jointTotal)}</Text>
     </Card>
   );
 }

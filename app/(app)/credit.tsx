@@ -9,6 +9,7 @@ import { EmptyState } from '../../src/components/empty-state';
 import { LockedNotice } from '../../src/components/locked-notice';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { SecondaryButton } from '../../src/components/secondary-button';
+import { useDisplayCurrency } from '../../src/data/display-currency';
 import { useCreditAccounts, useCreditLogs } from '../../src/data/credit';
 import { useMyMembership } from '../../src/data/household';
 import { currentMonth } from '../../src/data/month';
@@ -27,7 +28,7 @@ import {
   type AttentionReason,
   type UtilisationBand,
 } from '../../src/lib/credit';
-import { formatCAD, formatPercent } from '../../src/lib/money';
+import { formatPercent } from '../../src/lib/money';
 import { colors, radius, spacing, typography } from '../../src/theme/tokens';
 import type { Tables } from '../../src/types/database';
 
@@ -256,6 +257,7 @@ function AccountsCard({
   onEdit: (id: string) => void;
   onAdd: () => void;
 }) {
+  const { format: formatAmount } = useDisplayCurrency();
   return (
     <Card style={styles.cardBody}>
       <Text style={styles.cardTitle}>Accounts</Text>
@@ -269,7 +271,7 @@ function AccountsCard({
           <View style={styles.accountTop}>
             <Text style={styles.accountName}>{account.name}</Text>
             <Text style={styles.accountAmount}>
-              {formatCAD(account.current_balance)} / {formatCAD(account.credit_limit)}
+              {formatAmount(account.current_balance)} / {formatAmount(account.credit_limit)}
             </Text>
           </View>
           <Text style={styles.meta}>

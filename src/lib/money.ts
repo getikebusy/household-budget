@@ -23,6 +23,21 @@ export function formatNGN(amount: number) {
   return withSign(amount, `₦${formatGrouped(amount, 2)}`);
 }
 
+export type CurrencyCode = 'CAD' | 'USD' | 'GBP' | 'NGN';
+
+export const CURRENCIES: readonly CurrencyCode[] = ['CAD', 'USD', 'GBP', 'NGN'];
+
+export const CURRENCY_SYMBOL: Record<CurrencyCode, string> = {
+  CAD: '$',
+  USD: 'US$',
+  GBP: '£',
+  NGN: '₦',
+};
+
+export function formatMoney(amount: number, currency: CurrencyCode, whole = false) {
+  return withSign(amount, `${CURRENCY_SYMBOL[currency]}${formatGrouped(amount, whole ? 0 : 2)}`);
+}
+
 export function formatPercent(fraction: number, dp = 1) {
   return `${(fraction * 100).toFixed(dp)}%`;
 }

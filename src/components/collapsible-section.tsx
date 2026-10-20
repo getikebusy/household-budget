@@ -45,7 +45,7 @@ export function CollapsibleSection({
         <View style={styles.right}>
           {right}
           <View style={{ transform: [{ rotate: isOpen ? '180deg' : '0deg' }] }}>
-            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" accessibilityElementsHidden>
+            <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
               <Path
                 d="M6 9l6 6 6-6"
                 stroke={colors.muted}

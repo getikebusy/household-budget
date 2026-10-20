@@ -442,18 +442,21 @@ export type Database = {
       }
       member_private: {
         Row: {
+          display_currency: Database["public"]["Enums"]["currency_code"]
           household_id: string
           take_home_cad: number
           updated_at: string
           user_id: string
         }
         Insert: {
+          display_currency?: Database["public"]["Enums"]["currency_code"]
           household_id: string
           take_home_cad?: number
           updated_at?: string
           user_id: string
         }
         Update: {
+          display_currency?: Database["public"]["Enums"]["currency_code"]
           household_id?: string
           take_home_cad?: number
           updated_at?: string
@@ -465,6 +468,32 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminder_log: {
+        Row: {
+          credit_account_id: string
+          sent_at: string
+          statement_date: string
+        }
+        Insert: {
+          credit_account_id: string
+          sent_at?: string
+          statement_date: string
+        }
+        Update: {
+          credit_account_id?: string
+          sent_at?: string
+          statement_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_log_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "credit_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -582,6 +611,9 @@ export type Database = {
         }
         Returns: string
       }
+      cancel_invite: { Args: never; Returns: undefined }
+      cleanup_auth_codes: { Args: never; Returns: undefined }
+      clear_orphan_membership: { Args: never; Returns: undefined }
       create_household: {
         Args: {
           p_display_name: string
@@ -614,18 +646,21 @@ export type Database = {
       is_primary: { Args: never; Returns: boolean }
       is_session_verified: { Args: never; Returns: boolean }
       my_household_id: { Args: never; Returns: string }
+      remove_partner: { Args: never; Returns: undefined }
       seed_household_defaults: {
         Args: { p_household: string }
         Returns: undefined
       }
       session_verified: { Args: never; Returns: boolean }
       set_joint_share: { Args: { p_primary_share: number }; Returns: undefined }
+      set_my_display_currency: {
+        Args: { p_currency: Database["public"]["Enums"]["currency_code"] }
+        Returns: undefined
+      }
       set_partner_display_name: {
         Args: { p_display_name: string }
         Returns: undefined
       }
-      cancel_invite: { Args: never; Returns: undefined }
-      remove_partner: { Args: never; Returns: undefined }
       update_my_profile: {
         Args: { p_display_name: string; p_take_home_cad: number }
         Returns: undefined

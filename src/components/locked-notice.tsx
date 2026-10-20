@@ -10,7 +10,7 @@ type LockedNoticeProps = {
 export function LockedNotice({ text }: LockedNoticeProps) {
   return (
     <View accessibilityRole="text" accessibilityLabel={text} style={styles.band}>
-      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" accessibilityElementsHidden>
+      <Svg width={20} height={20} viewBox="0 0 24 24" fill="none" aria-hidden>
         <Rect
           x={5}
           y={11}
