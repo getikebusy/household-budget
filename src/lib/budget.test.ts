@@ -28,6 +28,11 @@ describe('toCad', () => {
     expect(toCad(50000, 'NGN', 940.29)).toBe(53.18);
   });
 
+  it('converts US dollars and pounds into CAD', () => {
+    expect(toCad(72, 'USD', 0.72)).toBe(100);
+    expect(toCad(55, 'GBP', 0.55)).toBe(100);
+  });
+
   it('rejects a missing naira rate', () => {
     expect(() => toCad(50000, 'NGN', 0)).toThrow('Exchange rate must be greater than zero');
   });

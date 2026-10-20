@@ -9,11 +9,28 @@ import { useMyMembership } from './household';
 export type HouseholdSettings = Tables<'household_settings'>;
 export type FxRate = Tables<'fx_rates'>;
 
+export type FxQuote = 'NGN' | 'USD' | 'GBP';
+export type FxQuoteMap = Partial<Record<FxQuote, FxRate>>;
+
 export function effectiveRate(
   settings: Pick<HouseholdSettings, 'fx_override_ngn_per_cad'> | null | undefined,
   latest: Pick<FxRate, 'rate'> | null | undefined,
 ): number | null {
   return settings?.fx_override_ngn_per_cad ?? latest?.rate ?? null;
+}
+
+export function rateForCurrency(
+  currency: 'CAD' | FxQuote,
+  quotes: FxQuoteMap | undefined,
+  ngnOverride: number | null | undefined,
+): number | null {
+  if (currency === 'CAD') {
+    return 1;
+  }
+  if (currency === 'NGN') {
+    return ngnOverride ?? quotes?.NGN?.rate ?? null;
+  }
+  return quotes?.[currency]?.rate ?? null;
 }
 
 export function useSettings() {
@@ -100,23 +117,30 @@ export function useSetPartnerName() {
   });
 }
 
-export function useLatestFxRate() {
+export function useFxQuotes() {
   const { session } = useSession();
 
   return useQuery({
-    queryKey: ['fx-rate'],
+    queryKey: ['fx-rates'],
     enabled: Boolean(session),
-    queryFn: async (): Promise<FxRate | null> => {
+    queryFn: async (): Promise<FxQuoteMap> => {
       const { data, error } = await supabase
         .from('fx_rates')
         .select('*')
+        .eq('base', 'CAD')
+        .in('quote', ['NGN', 'USD', 'GBP'])
         .order('fetched_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(30);
       if (error) {
         throw error;
       }
-      return data;
+      const latest: FxQuoteMap = {};
+      for (const row of data ?? []) {
+        if ((row.quote === 'NGN' || row.quote === 'USD' || row.quote === 'GBP') && !latest[row.quote]) {
+          latest[row.quote] = row;
+        }
+      }
+      return latest;
     },
   });
 }
