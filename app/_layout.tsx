@@ -10,8 +10,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useGlobalSearchParams, usePathname, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { LoadingScreen } from '../src/components/loading-screen';
+import { PrimaryButton } from '../src/components/primary-button';
 import {
   SessionProvider,
   clearLocalSession,
@@ -23,6 +25,7 @@ import {
 } from '../src/data/auth';
 import { usePendingInviteToken, savePendingInviteToken } from '../src/lib/pending-invite';
 import { queryClient } from '../src/lib/query-client';
+import { colors, spacing, typography } from '../src/theme/tokens';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -96,6 +99,15 @@ function RootNavigator() {
     return <LoadingScreen />;
   }
 
+  if (session && verifiedQuery.data === true && householdQuery.isError) {
+    return (
+      <View style={styles.blocked}>
+        <Text style={styles.blockedTitle}>Could not load your household.</Text>
+        <PrimaryButton title="Try again" onPress={() => void householdQuery.refetch()} />
+      </View>
+    );
+  }
+
   let redirect:
     | '/sign-in'
     | '/verify'
@@ -148,3 +160,20 @@ function RootNavigator() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  blocked: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing[16],
+    padding: spacing[24],
+  },
+  blockedTitle: {
+    fontFamily: typography.family[600],
+    fontSize: typography.size[15],
+    color: colors.ink,
+    textAlign: 'center',
+  },
+});

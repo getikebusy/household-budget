@@ -143,9 +143,16 @@ export function useMyHousehold(enabled: boolean) {
   return useQuery({
     queryKey: ['my-household', session?.user.id ?? null],
     queryFn: async () => {
+      if (!session) {
+        return null;
+      }
+      // Household read policy returns every member. maybeSingle without this
+      // filter errors once a partner has joined, and the app treats that as
+      // "no household".
       const { data, error } = await supabase
         .from('household_members')
         .select('household_id')
+        .eq('user_id', session.user.id)
         .maybeSingle();
       if (error) {
         throw error;
