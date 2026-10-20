@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
+import { AuthFlowError } from '../../data/auth';
+
 import {
   effectiveRate,
   useFxQuotes,
+  useSyncFxRates,
   useUpdateSettings,
   type FxQuote,
   type HouseholdSettings,
 } from '../../data/settings';
 import { colors, typography } from '../../theme/tokens';
+import { SecondaryButton } from '../secondary-button';
 import { TextField } from '../text-field';
 import { errorText, timeAgo } from './form';
 import { SectionFrame } from './section-frame';
@@ -17,8 +21,19 @@ import { useServerState } from './use-server-state';
 type ExchangeSectionProps = {
   settings: HouseholdSettings;
   locked: boolean;
-  onSaved: () => void;
+  onSaved: (message?: string) => void;
 };
+
+function syncErrorText(error: unknown) {
+  const code = error instanceof AuthFlowError ? error.payload?.error : undefined;
+  if (code === 'not_allowed') {
+    return 'Only the primary account can update rates';
+  }
+  if (code === 'bad_rate') {
+    return 'The rate provider is unavailable. Try again later.';
+  }
+  return 'Could not update rates. Try again.';
+}
 
 function formatRate(rate: number) {
   return rate.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
@@ -38,6 +53,7 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
   const server = settings.fx_override_ngn_per_cad == null ? '' : String(settings.fx_override_ngn_per_cad);
   const [override, setOverride] = useServerState(server);
   const [error, setError] = useState<string | null>(null);
+  const sync = useSyncFxRates();
   const dirty = override.trim() !== server;
   const draftRate = override.trim() === '' ? null : Number(override);
   const used = effectiveRate(
@@ -57,6 +73,16 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
       onSaved();
     } catch (caught) {
       setError(errorText(caught));
+    }
+  }
+
+  async function syncRates() {
+    setError(null);
+    try {
+      const result = await sync.mutateAsync();
+      onSaved(result.skipped ? 'Rates are already up to date' : 'Rates updated');
+    } catch (caught) {
+      setError(syncErrorText(caught));
     }
   }
 
@@ -85,6 +111,9 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
         placeholder="Leave blank to use the live rate"
       />
       <Text style={styles.body}>Naira rate used {rateText('NGN', used).replace('NGN: ', '')}</Text>
+      {locked ? null : (
+        <SecondaryButton title="Update rates" loading={sync.isPending} onPress={() => void syncRates()} />
+      )}
     </SectionFrame>
   );
 }

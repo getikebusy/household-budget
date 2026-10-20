@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
 import { beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
+import { wasSignedOutForIdle } from '../../src/lib/idle-timeout';
 import { savePendingInviteToken } from '../../src/lib/pending-invite';
 import { emailSchema, friendlyAuthError } from '../../src/lib/auth-schema';
 import { supabase } from '../../src/lib/supabase';
@@ -26,6 +27,7 @@ export default function SignInScreen() {
   const params = useLocalSearchParams<{ reset?: string; invite?: string | string[] }>();
   const inviteToken = Array.isArray(params.invite) ? params.invite[0] : params.invite;
   const [formError, setFormError] = useState<string | null>(null);
+  const [idleNotice] = useState(wasSignedOutForIdle);
   const {
     control,
     handleSubmit,
@@ -70,6 +72,9 @@ export default function SignInScreen() {
     <AuthCard title="Sign in" subtitle="Household Budget">
       {params.reset === '1' ? (
         <Text style={styles.success}>Password updated. Please sign in.</Text>
+      ) : null}
+      {idleNotice ? (
+        <Text style={styles.success}>You were signed out after 15 minutes of inactivity.</Text>
       ) : null}
       <Controller
         control={control}

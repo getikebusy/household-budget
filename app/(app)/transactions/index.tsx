@@ -7,11 +7,11 @@ import { FeedAvatar } from '../../../src/components/feed-avatar';
 import { MonthSwitcher } from '../../../src/components/month-switcher';
 import { PrimaryButton } from '../../../src/components/primary-button';
 import { SegmentedControl } from '../../../src/components/segmented-control';
+import { useDisplayCurrency } from '../../../src/data/display-currency';
 import { useMyMembership } from '../../../src/data/household';
 import { useMonth } from '../../../src/data/month';
 import { useFeed } from '../../../src/data/summary';
 import { useView, type BudgetView } from '../../../src/data/view';
-import { formatCAD } from '../../../src/lib/money';
 import { colors, spacing, typography } from '../../../src/theme/tokens';
 
 type Filter = 'all' | 'expense' | 'income' | 'joint' | 'mine';
@@ -55,22 +55,30 @@ function shareLabel(share: number) {
   return `${Math.round(share * 100)}%`;
 }
 
-function detail(row: FeedRow, view: BudgetView, myShare: number, primaryShare: number, partnerShare: number) {
+function detail(
+  row: FeedRow,
+  view: BudgetView,
+  myShare: number,
+  primaryShare: number,
+  partnerShare: number,
+  formatAmount: (cad: number) => string,
+) {
   if (row.scope !== 'joint') {
     return null;
   }
   if (view === 'me') {
-    return `Your ${shareLabel(myShare)} of ${formatCAD(row.amount_cad)}`;
+    return `Your ${shareLabel(myShare)} of ${formatAmount(row.amount_cad)}`;
   }
   return `Joint · split ${Math.round(primaryShare * 100)}/${Math.round(partnerShare * 100)}`;
 }
 
-function amountLabel(row: FeedRow) {
-  const money = formatCAD(row.view_amount_cad);
+function amountLabel(row: FeedRow, formatAmount: (cad: number) => string) {
+  const money = formatAmount(row.view_amount_cad);
   return row.type === 'income' ? `+${money}` : money;
 }
 
 export default function TransactionsScreen() {
+  const { format: formatAmount } = useDisplayCurrency();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
   const month = useMonth((state) => state.month);
@@ -143,7 +151,7 @@ export default function TransactionsScreen() {
             <TableRow
               key={row.id}
               row={row}
-              note={detail(row, view, myShare, primaryShare, partnerShare)}
+              note={detail(row, view, myShare, primaryShare, partnerShare, formatAmount)}
             />
           ))}
         </View>
@@ -153,7 +161,7 @@ export default function TransactionsScreen() {
             <PhoneRow
               key={row.id}
               row={row}
-              note={detail(row, view, myShare, primaryShare, partnerShare)}
+              note={detail(row, view, myShare, primaryShare, partnerShare, formatAmount)}
             />
           ))
         : null}
@@ -168,6 +176,7 @@ function openMine(row: FeedRow) {
 }
 
 function TableRow({ row, note }: { row: FeedRow; note: string | null }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const body = (
     <>
       <Text style={[styles.cell, styles.date]}>{feedDate(row.occurred_on)}</Text>
@@ -177,7 +186,7 @@ function TableRow({ row, note }: { row: FeedRow; note: string | null }) {
       </View>
       <Text style={[styles.cell, styles.category]}>{row.category_name}</Text>
       <Text style={[styles.cell, styles.whose]}>{row.scope === 'joint' ? 'Joint' : row.owner_name}</Text>
-      <Text style={[styles.cell, styles.amount, row.type === 'income' ? styles.income : null]}>{amountLabel(row)}</Text>
+      <Text style={[styles.cell, styles.amount, row.type === 'income' ? styles.income : null]}>{amountLabel(row, formatAmount)}</Text>
     </>
   );
 
@@ -188,7 +197,7 @@ function TableRow({ row, note }: { row: FeedRow; note: string | null }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${row.description}, ${amountLabel(row)}`}
+      accessibilityLabel={`${row.description}, ${amountLabel(row, formatAmount)}`}
       onPress={() => openMine(row)}
       style={styles.tableRow}>
       {body}
@@ -197,6 +206,7 @@ function TableRow({ row, note }: { row: FeedRow; note: string | null }) {
 }
 
 function PhoneRow({ row, note }: { row: FeedRow; note: string | null }) {
+  const { format: formatAmount } = useDisplayCurrency();
   const body = (
     <>
       <FeedAvatar scope={row.scope} name={row.owner_name} mine={row.is_mine} />
@@ -207,7 +217,7 @@ function PhoneRow({ row, note }: { row: FeedRow; note: string | null }) {
         </Text>
         {note ? <Text style={styles.note}>{note}</Text> : null}
       </View>
-      <Text style={[styles.phoneAmount, row.type === 'income' ? styles.income : null]}>{amountLabel(row)}</Text>
+      <Text style={[styles.phoneAmount, row.type === 'income' ? styles.income : null]}>{amountLabel(row, formatAmount)}</Text>
     </>
   );
 
@@ -218,7 +228,7 @@ function PhoneRow({ row, note }: { row: FeedRow; note: string | null }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${row.description}, ${amountLabel(row)}`}
+      accessibilityLabel={`${row.description}, ${amountLabel(row, formatAmount)}`}
       onPress={() => openMine(row)}
       style={styles.phoneRow}>
       {body}
