@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 
+import { clearActivity } from '../lib/idle-timeout';
 import { queryClient } from '../lib/query-client';
 import { supabase } from '../lib/supabase';
 
@@ -253,6 +254,7 @@ export async function clearLocalSession(): Promise<void> {
   cancelPasswordRecovery();
   await supabase.auth.signOut();
   queryClient.clear();
+  await clearActivity();
 }
 
 export async function signOut(): Promise<void> {

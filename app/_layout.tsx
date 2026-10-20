@@ -10,7 +10,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useGlobalSearchParams, usePathname, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { LoadingScreen } from '../src/components/loading-screen';
 import { PrimaryButton } from '../src/components/primary-button';
@@ -19,10 +19,12 @@ import {
   clearLocalSession,
   isAwaitingLoginCode,
   isRecoveringPassword,
+  signOut,
   useMyHousehold,
   useSession,
   useSessionVerified,
 } from '../src/data/auth';
+import { recordActivity, useIdleSignOut } from '../src/lib/idle-timeout';
 import { usePendingInviteToken, savePendingInviteToken } from '../src/lib/pending-invite';
 import { queryClient } from '../src/lib/query-client';
 import { colors, spacing, typography } from '../src/theme/tokens';
@@ -89,6 +91,12 @@ function RootNavigator() {
     }
   }, [staleUnverified]);
 
+  useIdleSignOut(
+    Boolean(session) && verifiedQuery.data === true && !isRecoveringPassword(),
+    session?.user.last_sign_in_at,
+    signOut,
+  );
+
   if (
     !isRecoveringPassword() &&
     (isLoading ||
@@ -149,7 +157,8 @@ function RootNavigator() {
   }
 
   return (
-    <>
+    // Web records activity with document listeners; native needs touches from the view tree.
+    <View style={styles.root} onTouchStart={Platform.OS === 'web' ? undefined : () => recordActivity()}>
       {redirect ? <Redirect href={redirect as Href} /> : null}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
@@ -157,11 +166,14 @@ function RootNavigator() {
         <Stack.Screen name="(app)" />
         <Stack.Screen name="invite/[token]" />
       </Stack>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   blocked: {
     flex: 1,
     backgroundColor: colors.bg,
