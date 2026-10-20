@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router, type Href } from 'expo-router';
+import { Redirect, router, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text } from 'react-native';
@@ -9,6 +9,7 @@ import { AuthCard } from '../../src/components/auth-card';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { createHousehold } from '../../src/data/household';
+import { usePendingInviteToken } from '../../src/lib/pending-invite';
 import { colors, typography } from '../../src/theme/tokens';
 
 const cadAmount = z
@@ -34,6 +35,7 @@ type FormInput = z.input<typeof schema>;
 type FormOutput = z.output<typeof schema>;
 
 export default function CreateHouseholdScreen() {
+  const pendingInvite = usePendingInviteToken();
   const [formError, setFormError] = useState<string | null>(null);
   const {
     control,
@@ -62,6 +64,14 @@ export default function CreateHouseholdScreen() {
     } catch {
       setFormError('Could not create the household. Please try again.');
     }
+  }
+
+  if (pendingInvite.isLoading) {
+    return null;
+  }
+
+  if (pendingInvite.token) {
+    return <Redirect href={`/invite/${pendingInvite.token}` as Href} />;
   }
 
   return (

@@ -1,13 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
-import { sendInvite, usePendingInvite, type HouseholdMember } from '../../data/household';
+import { cancelInvite, removePartner, sendInvite, usePendingInvite, type HouseholdMember } from '../../data/household';
 import { useSetPartnerName } from '../../data/settings';
 import { colors, spacing, typography } from '../../theme/tokens';
 import { Avatar } from '../avatar';
 import { Chip } from '../chip';
 import { PrimaryButton } from '../primary-button';
+import { SecondaryButton } from '../secondary-button';
 import { TextField } from '../text-field';
 import { errorText } from './form';
 import { SectionFrame } from './section-frame';
@@ -29,6 +30,7 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
   const [email, setEmail] = useServerState(pendingEmail);
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const nameDirty = Boolean(partner) && partnerName.trim() !== partner?.display_name;
   const inviteTitle =
     pendingEmail && email.trim().toLowerCase() === pendingEmail ? 'Resend invite' : 'Invite partner';
@@ -46,6 +48,62 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
     } catch (caught) {
       setError(errorText(caught));
     }
+  }
+
+  function confirmRemove() {
+    if (!partner) {
+      return;
+    }
+    Alert.alert(
+      `Remove ${partner.display_name}?`,
+      'They leave this household and will need a new invite to rejoin. Joint transactions stay. Their private budget lines are removed.',
+      [
+        { text: 'Keep partner', style: 'cancel' },
+        {
+          text: 'Remove partner',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setError(null);
+              setRemoving(true);
+              try {
+                await removePartner();
+                onSaved('Partner removed');
+              } catch (caught) {
+                setError(errorText(caught));
+              } finally {
+                setRemoving(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
+  function confirmCancelInvite() {
+    Alert.alert('Cancel this invite?', `${pendingEmail} will not be able to join with the current link.`, [
+      { text: 'Keep invite', style: 'cancel' },
+      {
+        text: 'Cancel invite',
+        style: 'destructive',
+        onPress: () => {
+          void (async () => {
+            setError(null);
+            setRemoving(true);
+            try {
+              await cancelInvite();
+              setEmail('');
+              onSaved('Invite cancelled');
+            } catch (caught) {
+              setError(errorText(caught));
+            } finally {
+              setRemoving(false);
+            }
+          })();
+        },
+      },
+    ]);
   }
 
   async function invite() {
@@ -87,6 +145,9 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
       {isPrimary && partner ? (
         <TextField label="Partner display name" value={partnerName} onChangeText={setPartnerName} maxLength={30} />
       ) : null}
+      {isPrimary && partner ? (
+        <SecondaryButton title="Remove partner" loading={removing} onPress={confirmRemove} />
+      ) : null}
       {isPrimary && !partner ? (
         <View style={styles.invite}>
           <TextField
@@ -99,6 +160,9 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
           />
           {pendingEmail ? <Text style={styles.meta}>An invite is waiting for {pendingEmail}.</Text> : null}
           <PrimaryButton title={inviteTitle} loading={sending} disabled={!email.trim()} onPress={() => void invite()} />
+          {pendingEmail ? (
+            <SecondaryButton title="Cancel invite" loading={removing} onPress={confirmCancelInvite} />
+          ) : null}
         </View>
       ) : null}
     </SectionFrame>

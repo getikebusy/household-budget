@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
 import { beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
+import { savePendingInviteToken } from '../../src/lib/pending-invite';
 import { emailSchema, friendlyAuthError } from '../../src/lib/auth-schema';
 import { supabase } from '../../src/lib/supabase';
 import { colors, radius, spacing, typography } from '../../src/theme/tokens';
@@ -22,7 +23,8 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export default function SignInScreen() {
-  const params = useLocalSearchParams<{ reset?: string }>();
+  const params = useLocalSearchParams<{ reset?: string; invite?: string | string[] }>();
+  const inviteToken = Array.isArray(params.invite) ? params.invite[0] : params.invite;
   const [formError, setFormError] = useState<string | null>(null);
   const {
     control,
@@ -35,6 +37,9 @@ export default function SignInScreen() {
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
+    if (inviteToken) {
+      await savePendingInviteToken(inviteToken);
+    }
     beginLoginVerification();
     const { error } = await supabase.auth.signInWithPassword({
       email: values.email,
@@ -48,7 +53,7 @@ export default function SignInScreen() {
     try {
       const result = await sendLoginCode();
       if (result.alreadyVerified) {
-        router.replace('/' as Href);
+        router.replace((inviteToken ? `/invite/${inviteToken}` : '/') as Href);
         return;
       }
     } catch (sendError) {
@@ -58,7 +63,7 @@ export default function SignInScreen() {
         return;
       }
     }
-    router.replace('/verify' as Href);
+    router.replace((inviteToken ? `/verify?invite=${encodeURIComponent(inviteToken)}` : '/verify') as Href);
   }
 
   return (
@@ -102,7 +107,10 @@ export default function SignInScreen() {
       {formError ? <Text style={styles.error}>{formError}</Text> : null}
       <PrimaryButton title="Sign in" loading={isSubmitting} onPress={handleSubmit(onSubmit)} />
       <View style={styles.links}>
-        <TextLink href="/sign-up" label="Create an account" />
+        <TextLink
+          href={inviteToken ? `/sign-up?invite=${encodeURIComponent(inviteToken)}` : '/sign-up'}
+          label="Create an account"
+        />
         <TextLink href="/forgot-password" label="Forgot password" />
       </View>
     </AuthCard>

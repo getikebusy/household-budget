@@ -624,6 +624,8 @@ export type Database = {
         Args: { p_display_name: string }
         Returns: undefined
       }
+      cancel_invite: { Args: never; Returns: undefined }
+      remove_partner: { Args: never; Returns: undefined }
       update_my_profile: {
         Args: { p_display_name: string; p_take_home_cad: number }
         Returns: undefined

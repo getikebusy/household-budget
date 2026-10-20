@@ -7,7 +7,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/plus-jakarta-sans';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Redirect, Stack, usePathname, useSegments, type Href } from 'expo-router';
+import { Redirect, Stack, useGlobalSearchParams, usePathname, useSegments, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -21,7 +21,7 @@ import {
   useSession,
   useSessionVerified,
 } from '../src/data/auth';
-import { usePendingInviteToken } from '../src/lib/pending-invite';
+import { usePendingInviteToken, savePendingInviteToken } from '../src/lib/pending-invite';
 import { queryClient } from '../src/lib/query-client';
 
 SplashScreen.preventAutoHideAsync();
@@ -60,9 +60,18 @@ function RootNavigator() {
   const householdQuery = useMyHousehold(verifiedQuery.data === true);
   const pathname = usePathname();
   const segments = useSegments();
+  const search = useGlobalSearchParams<{ invite?: string | string[] }>();
+  const inviteFromQuery = Array.isArray(search.invite) ? search.invite[0] : search.invite;
   const root = String(segments[0] ?? '');
   const isInvite = pathname.startsWith('/invite/');
-  const pendingInvite = usePendingInviteToken(`${session?.user.id ?? ''}:${pathname}`);
+  const pendingInvite = usePendingInviteToken(`${session?.user.id ?? ''}:${pathname}:${inviteFromQuery ?? ''}`);
+  const inviteToken = inviteFromQuery || pendingInvite.token;
+
+  useEffect(() => {
+    if (inviteFromQuery) {
+      void savePendingInviteToken(inviteFromQuery);
+    }
+  }, [inviteFromQuery]);
   const staleUnverified =
     Boolean(session) &&
     !isLoading &&
@@ -81,7 +90,7 @@ function RootNavigator() {
     !isRecoveringPassword() &&
     (isLoading ||
       (session && verifiedQuery.isPending) ||
-      (session && verifiedQuery.data && householdQuery.isPending) ||
+      (session && verifiedQuery.data && (householdQuery.isPending || (householdQuery.isFetching && !householdQuery.data))) ||
       (session && verifiedQuery.data === true && !householdQuery.data && pendingInvite.isLoading))
   ) {
     return <LoadingScreen />;
@@ -115,8 +124,8 @@ function RootNavigator() {
       redirect = '/sign-in';
     }
   } else if (!householdQuery.data) {
-    if (pendingInvite.token) {
-      const invitePath = `/invite/${pendingInvite.token}` as const;
+    if (inviteToken) {
+      const invitePath = `/invite/${inviteToken}` as const;
       if (pathname !== invitePath) {
         redirect = invitePath;
       }

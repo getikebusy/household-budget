@@ -12,6 +12,7 @@ import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
 import { AuthFlowError, useSession, useSessionVerified } from '../../src/data/auth';
 import { acceptInvite } from '../../src/data/household';
+import { queryClient } from '../../src/lib/query-client';
 import { clearPendingInviteToken, savePendingInviteToken } from '../../src/lib/pending-invite';
 import { colors, spacing, typography } from '../../src/theme/tokens';
 
@@ -91,6 +92,7 @@ export default function InviteScreen() {
         displayName: values.displayName,
         takeHomeCad: values.takeHomeCad,
       });
+      await queryClient.refetchQueries({ queryKey: ['my-household'] });
       await clearPendingInviteToken();
       router.replace('/' as Href);
     } catch (error) {
@@ -118,8 +120,14 @@ export default function InviteScreen() {
           Create an account or sign in with the email this invite was sent to.
         </Text>
         <View style={styles.actions}>
-          <PrimaryButton title="Create an account" onPress={() => router.push('/sign-up' as Href)} />
-          <PrimaryButton title="Sign in" onPress={() => router.push('/sign-in' as Href)} />
+          <PrimaryButton
+            title="Create an account"
+            onPress={() => router.push(`/sign-up?invite=${encodeURIComponent(token)}` as Href)}
+          />
+          <PrimaryButton
+            title="Sign in"
+            onPress={() => router.push(`/sign-in?invite=${encodeURIComponent(token)}` as Href)}
+          />
         </View>
       </AuthCard>
     );

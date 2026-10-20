@@ -177,9 +177,18 @@ export async function invokeFunction<T>(name: string, body?: Record<string, unkn
   throw new AuthFlowError(payload?.error ?? error.message, payload);
 }
 
+export function appOrigin() {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'https://household-budget-alpha-seven.vercel.app';
+}
+
 export async function requestPasswordReset(email: string): Promise<void> {
   beginPasswordRecovery();
-  await supabase.auth.resetPasswordForEmail(email);
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${appOrigin()}/forgot-password`,
+  });
 }
 
 export async function completePasswordReset(params: {
