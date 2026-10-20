@@ -4,10 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 
 import { useAccounts, useCategories } from '../data/budget-lines';
 import { useMembers, useMyMembership } from '../data/household';
-import { effectiveRate, useLatestFxRate, useSettings } from '../data/settings';
+import { rateForCurrency, useFxQuotes, useSettings } from '../data/settings';
 import type { TransactionInput } from '../data/transactions';
 import { toCad } from '../lib/budget';
-import { formatCAD, formatNGN } from '../lib/money';
+import { formatCAD } from '../lib/money';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 import type { Enums, Tables } from '../types/database';
 import { PrimaryButton } from './primary-button';
@@ -50,16 +50,16 @@ export function TransactionForm({
   const categories = useCategories();
   const accounts = useAccounts();
   const settings = useSettings();
-  const latestRate = useLatestFxRate();
+  const quotes = useFxQuotes();
   const myName = membership.data?.display_name ?? 'Me';
   const primary = members.data?.find((member) => member.role === 'primary');
   const partner = members.data?.find((member) => member.role === 'partner');
   const partnerName = partner?.display_name ?? 'your partner';
-  const rate = effectiveRate(settings.data, latestRate.data);
 
   const [type, setType] = useState<EntryType>(initial?.type === 'income' ? 'income' : 'expense');
   const [amountText, setAmountText] = useState(initial ? String(initial.amount) : '');
   const [currency, setCurrency] = useState<Currency>(initial?.currency ?? 'CAD');
+  const rate = rateForCurrency(currency, quotes.data, settings.data?.fx_override_ngn_per_cad);
   const [description, setDescription] = useState(initial?.description ?? '');
   const [scope, setScope] = useState<Scope>(initial?.scope ?? 'personal');
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '');
@@ -70,7 +70,13 @@ export function TransactionForm({
   const amount = Number(amountText);
   const amountOk = Number.isFinite(amount) && amount > 0;
   const cadAmount =
-    currency === 'NGN' ? (rate && amountOk ? toCad(amount, 'NGN', rate) : 0) : amountOk ? toCad(amount, 'CAD', 1) : 0;
+    currency === 'CAD'
+      ? amountOk
+        ? toCad(amount, 'CAD', 1)
+        : 0
+      : rate && amountOk
+        ? toCad(amount, currency, rate)
+        : 0;
   const ownerLabel = scope === 'joint' ? 'Joint' : myName;
   const visibleCategories = (categories.data ?? []).filter((category) => {
     if (category.archived) {
@@ -102,8 +108,8 @@ export function TransactionForm({
       setError('Enter the date as YYYY-MM-DD');
       return;
     }
-    if (currency === 'NGN' && !(rate && rate > 0)) {
-      setError('Set an exchange rate in Settings before saving naira amounts');
+    if (currency !== 'CAD' && !(rate && rate > 0)) {
+      setError(`No ${currency} exchange rate yet. Wait for the daily rate, or set a naira override in Settings.`);
       return;
     }
     setError(null);
@@ -117,7 +123,7 @@ export function TransactionForm({
         type,
         occurred_on: occurredOn,
         account_id: accountId || null,
-        fx_ngn_per_cad: currency === 'NGN' ? rate : null,
+        fx_ngn_per_cad: currency === 'CAD' ? null : rate,
       });
     } catch (caught) {
       setError(errorText(caught));
@@ -167,7 +173,7 @@ export function TransactionForm({
             style={styles.amount}
           />
           <View style={styles.currencies}>
-            {(['CAD', 'NGN'] as const).map((option) => {
+            {(['CAD', 'NGN', 'USD', 'GBP'] as const).map((option) => {
               const selected = currency === option;
               return (
                 <Pressable
@@ -183,13 +189,13 @@ export function TransactionForm({
             })}
           </View>
         </View>
-        {currency === 'NGN' ? (
+        {currency === 'CAD' ? null : (
           <Text style={styles.hint}>
             {rate
-              ? `≈ ${formatCAD(amountOk ? cadAmount : 0)} at ${formatNGN(rate)} per CAD`
-              : 'Set an exchange rate in Settings to convert naira'}
+              ? `≈ ${formatCAD(amountOk ? cadAmount : 0)} at ${rate.toLocaleString('en-CA', { maximumFractionDigits: 4 })} ${currency} per CAD`
+              : `No live ${currency} rate yet. Canadian dollars are the base currency.`}
           </Text>
-        ) : null}
+        )}
 
         <TextField
           label="Description"
@@ -361,6 +367,7 @@ const styles = StyleSheet.create({
   },
   currencies: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing[8],
   },
   currency: {

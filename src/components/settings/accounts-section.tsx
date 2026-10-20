@@ -79,6 +79,8 @@ export function AccountsSection({ locked, onSaved }: AccountsSectionProps) {
             options={[
               { value: 'CAD', label: 'CAD' },
               { value: 'NGN', label: 'NGN' },
+              { value: 'USD', label: 'USD' },
+              { value: 'GBP', label: 'GBP' },
             ]}
             value={currency}
             onChange={setCurrency}

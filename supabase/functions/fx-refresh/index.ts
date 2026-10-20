@@ -1,8 +1,12 @@
 import { adminClient } from "../_shared/auth.ts";
 
 const DEFAULT_FX_URL = "https://open.er-api.com/v6/latest/CAD";
-const MIN_RATE = 100;
-const MAX_RATE = 10000;
+const QUOTES = ["NGN", "USD", "GBP"] as const;
+const BOUNDS: Record<(typeof QUOTES)[number], readonly [number, number]> = {
+  NGN: [100, 10000],
+  USD: [0.4, 1.5],
+  GBP: [0.3, 1.2],
+};
 
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -11,8 +15,12 @@ function json(status: number, body: unknown): Response {
   });
 }
 
-function isValidRate(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= MIN_RATE && value <= MAX_RATE;
+function isValidRate(quote: (typeof QUOTES)[number], value: unknown): value is number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return false;
+  }
+  const [min, max] = BOUNDS[quote];
+  return value >= min && value <= max;
 }
 
 Deno.serve(async (req) => {
@@ -40,35 +48,42 @@ Deno.serve(async (req) => {
     return json(502, { error: "bad_rate" });
   }
 
-  let rate: unknown;
+  let rates: Partial<Record<(typeof QUOTES)[number], unknown>> = {};
   try {
     const response = await fetch(apiUrl);
     if (!response.ok) {
       console.error("FX provider returned", response.status);
       return json(502, { error: "bad_rate" });
     }
-    const payload = (await response.json()) as { rates?: { NGN?: unknown } };
-    rate = payload.rates?.NGN;
+    const payload = (await response.json()) as { rates?: Partial<Record<(typeof QUOTES)[number], unknown>> };
+    rates = payload.rates ?? {};
   } catch (error) {
     console.error("FX fetch failed", error instanceof Error ? error.message : "unknown error");
     return json(502, { error: "bad_rate" });
   }
 
-  if (!isValidRate(rate)) {
-    console.error("CAD→NGN rate rejected", rate);
+  const rows = QUOTES.flatMap((quote) => {
+    const rate = rates[quote];
+    if (!isValidRate(quote, rate)) {
+      console.error(`CAD→${quote} rate rejected`);
+      return [];
+    }
+    return [{ base: "CAD", quote, rate, source }];
+  });
+
+  if (rows.length === 0) {
     return json(502, { error: "bad_rate" });
   }
 
   const { data, error } = await adminClient()
     .from("fx_rates")
-    .insert({ base: "CAD", quote: "NGN", rate, source })
-    .select("id, rate, fetched_at")
-    .single();
+    .insert(rows)
+    .select("id, quote, rate, fetched_at");
 
   if (error) {
     console.error("fx_rates insert failed", error.message);
     return json(500, { error: "server_error" });
   }
 
-  return json(200, { ok: true, id: data.id, rate: data.rate, fetched_at: data.fetched_at });
+  return json(200, { ok: true, rates: data });
 });

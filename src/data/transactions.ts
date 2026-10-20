@@ -19,10 +19,14 @@ export type TransactionInput = {
 };
 
 function amountCad(input: Pick<TransactionInput, 'amount' | 'currency' | 'fx_ngn_per_cad'>) {
-  if (input.currency === 'NGN') {
-    return toCad(input.amount, 'NGN', input.fx_ngn_per_cad ?? 0);
+  if (input.currency === 'CAD') {
+    return toCad(input.amount, 'CAD', 1);
   }
-  return toCad(input.amount, 'CAD', 1);
+  return toCad(input.amount, input.currency, input.fx_ngn_per_cad ?? 0);
+}
+
+function storedRate(input: Pick<TransactionInput, 'currency' | 'fx_ngn_per_cad'>) {
+  return input.currency === 'CAD' ? null : (input.fx_ngn_per_cad ?? null);
 }
 
 function transactionColumns(
@@ -36,7 +40,7 @@ function transactionColumns(
     amount: input.amount,
     amount_cad: amountCad(input),
     currency: input.currency,
-    fx_ngn_per_cad: input.currency === 'NGN' ? (input.fx_ngn_per_cad ?? null) : null,
+    fx_ngn_per_cad: storedRate(input),
     category_id: input.category_id,
     description: input.description ?? '',
     scope: input.scope,
@@ -108,7 +112,7 @@ export function useUpdateTransaction() {
         amount: input.amount,
         amount_cad: amountCad(input),
         currency: input.currency,
-        fx_ngn_per_cad: input.currency === 'NGN' ? (input.fx_ngn_per_cad ?? null) : null,
+        fx_ngn_per_cad: storedRate(input),
         category_id: input.category_id,
         description: input.description ?? '',
         scope: input.scope,

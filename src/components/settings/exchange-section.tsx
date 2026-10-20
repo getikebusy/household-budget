@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { StyleSheet, Text } from 'react-native';
 
-import { effectiveRate, useLatestFxRate, useUpdateSettings, type HouseholdSettings } from '../../data/settings';
+import {
+  effectiveRate,
+  useFxQuotes,
+  useUpdateSettings,
+  type FxQuote,
+  type HouseholdSettings,
+} from '../../data/settings';
 import { colors, typography } from '../../theme/tokens';
 import { TextField } from '../text-field';
 import { errorText, timeAgo } from './form';
@@ -14,15 +20,20 @@ type ExchangeSectionProps = {
   onSaved: () => void;
 };
 
-function rateText(rate: number | null) {
+function formatRate(rate: number) {
+  return rate.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
+}
+
+function rateText(quote: FxQuote, rate: number | null) {
   if (rate == null) {
-    return 'No rate yet';
+    return `${quote}: No rate yet`;
   }
-  return `₦${rate.toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} per CAD`;
+  const prefix = quote === 'NGN' ? '₦' : '';
+  return `${quote}: ${prefix}${formatRate(rate)} per CAD`;
 }
 
 export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionProps) {
-  const latest = useLatestFxRate();
+  const quotes = useFxQuotes();
   const update = useUpdateSettings();
   const server = settings.fx_override_ngn_per_cad == null ? '' : String(settings.fx_override_ngn_per_cad);
   const [override, setOverride] = useServerState(server);
@@ -31,7 +42,7 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
   const draftRate = override.trim() === '' ? null : Number(override);
   const used = effectiveRate(
     { fx_override_ngn_per_cad: draftRate != null && draftRate > 0 ? draftRate : null },
-    latest.data,
+    quotes.data?.NGN,
   );
 
   async function save() {
@@ -56,10 +67,15 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
       saving={update.isPending}
       onSave={() => void save()}
       error={error}>
-      <Text style={styles.body}>
-        Live rate {rateText(latest.data?.rate ?? null)}
-        {latest.data ? ` · updated ${timeAgo(latest.data.fetched_at)}` : ''}
-      </Text>
+      {(['NGN', 'USD', 'GBP'] as const).map((quote) => {
+        const row = quotes.data?.[quote];
+        return (
+          <Text key={quote} style={styles.body}>
+            Live rate {rateText(quote, row?.rate ?? null)}
+            {row ? ` · updated ${timeAgo(row.fetched_at)}` : ''}
+          </Text>
+        );
+      })}
       <TextField
         label="Manual override (₦ per CAD)"
         value={override}
@@ -68,7 +84,7 @@ export function ExchangeSection({ settings, locked, onSaved }: ExchangeSectionPr
         editable={!locked}
         placeholder="Leave blank to use the live rate"
       />
-      <Text style={styles.body}>Rate used {rateText(used)}</Text>
+      <Text style={styles.body}>Naira rate used {rateText('NGN', used).replace('NGN: ', '')}</Text>
     </SectionFrame>
   );
 }

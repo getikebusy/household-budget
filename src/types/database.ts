@@ -636,7 +636,7 @@ export type Database = {
       budget_bucket: "needs" | "investment" | "emergency"
       category_kind: "fixed" | "variable" | "income"
       credit_type: "card" | "line" | "loan"
-      currency_code: "CAD" | "NGN"
+      currency_code: "CAD" | "NGN" | "USD" | "GBP"
       member_role: "primary" | "partner"
       txn_scope: "personal" | "joint"
       txn_type: "expense" | "income" | "transfer"
@@ -771,7 +771,7 @@ export const Constants = {
       budget_bucket: ["needs", "investment", "emergency"],
       category_kind: ["fixed", "variable", "income"],
       credit_type: ["card", "line", "loan"],
-      currency_code: ["CAD", "NGN"],
+      currency_code: ["CAD", "NGN", "USD", "GBP"],
       member_role: ["primary", "partner"],
       txn_scope: ["personal", "joint"],
       txn_type: ["expense", "income", "transfer"],
