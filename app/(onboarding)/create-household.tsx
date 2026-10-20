@@ -10,6 +10,7 @@ import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { createHousehold } from '../../src/data/household';
 import { usePendingInviteToken } from '../../src/lib/pending-invite';
+import { queryClient } from '../../src/lib/query-client';
 import { colors, typography } from '../../src/theme/tokens';
 
 const cadAmount = z
@@ -61,7 +62,13 @@ export default function CreateHouseholdScreen() {
         householdName: values.householdName || 'Our household',
       });
       router.replace('/' as Href);
-    } catch {
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : '';
+      if (message.toLowerCase().includes('already in a household')) {
+        await queryClient.invalidateQueries();
+        router.replace('/' as Href);
+        return;
+      }
       setFormError('Could not create the household. Please try again.');
     }
   }
