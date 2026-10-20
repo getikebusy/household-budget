@@ -57,9 +57,30 @@ export function BudgetRuleSection({ settings, locked, onSaved }: BudgetRuleSecti
       saveDisabled={!totalsOk}
       onSave={() => void save()}
       error={error}>
-      <TextField label="Needs & Personal ceiling (%)" value={needs} onChangeText={setNeeds} keyboardType="number-pad" editable={!locked} />
-      <TextField label="Investment floor (%)" value={investment} onChangeText={setInvestment} keyboardType="number-pad" editable={!locked} />
-      <TextField label="Emergency floor (%)" value={emergency} onChangeText={setEmergency} keyboardType="number-pad" editable={!locked} />
+      <TextField
+        label="Needs & Personal ceiling (%)"
+        value={needs}
+        onChangeText={setNeeds}
+        keyboardType="number-pad"
+        editable={!locked}
+        info="The most of your take-home pay to spend on needs and personal costs (rent, food, transport, bills, Black Tax). Staying under this leaves room for saving."
+      />
+      <TextField
+        label="Investment floor (%)"
+        value={investment}
+        onChangeText={setInvestment}
+        keyboardType="number-pad"
+        editable={!locked}
+        info="The least of your take-home pay to put into investments each month (e.g. TFSA, RRSP, FHSA)."
+      />
+      <TextField
+        label="Emergency floor (%)"
+        value={emergency}
+        onChangeText={setEmergency}
+        keyboardType="number-pad"
+        editable={!locked}
+        info="The least of your take-home pay to add to your emergency fund each month, until it covers 3 to 6 months of expenses."
+      />
       <Chip tone={totalsOk ? 'ok' : 'bad'} label="Totals 100%" />
       {totalsOk ? null : <Text style={styles.hint}>Current total is {Number.isFinite(sum) ? sum : 0}%.</Text>}
     </SectionFrame>

@@ -1,16 +1,21 @@
 import { StyleSheet, Text, TextInput, type TextInputProps, View } from 'react-native';
 
+import { InfoTip } from './InfoTip';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type TextFieldProps = TextInputProps & {
   label: string;
   error?: string;
+  info?: string;
 };
 
-export function TextField({ label, error, style, accessibilityLabel, editable = true, ...rest }: TextFieldProps) {
+export function TextField({ label, error, info, style, accessibilityLabel, editable = true, ...rest }: TextFieldProps) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        {info ? <InfoTip field={label} text={info} /> : null}
+      </View>
       <TextInput
         {...rest}
         editable={editable}
@@ -32,7 +37,13 @@ const styles = StyleSheet.create({
   wrap: {
     gap: spacing[8],
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[4],
+  },
   label: {
+    flexShrink: 1,
     fontFamily: typography.family[600],
     fontSize: typography.size[13],
     color: colors.ink,

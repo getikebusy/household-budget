@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
+import { InfoTip } from './InfoTip';
 import { colors, radius, spacing, typography } from '../theme/tokens';
 
 type MoneyPrefix = '$' | '₦';
@@ -10,6 +11,7 @@ type MoneyFieldProps = Omit<TextInputProps, 'value' | 'onChangeText'> & {
   onChangeText: (value: string) => void;
   prefix: MoneyPrefix;
   error?: string;
+  info?: string;
 };
 
 export function MoneyField({
@@ -18,6 +20,7 @@ export function MoneyField({
   onChangeText,
   prefix,
   error,
+  info,
   style,
   accessibilityLabel,
   editable = true,
@@ -25,7 +28,10 @@ export function MoneyField({
 }: MoneyFieldProps) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        {info ? <InfoTip field={label} text={info} /> : null}
+      </View>
       <View style={[styles.field, editable === false ? styles.fieldLocked : null, error ? styles.fieldError : null]}>
         <Text style={styles.prefix} accessibilityElementsHidden importantForAccessibility="no">
           {prefix}
@@ -55,7 +61,13 @@ const styles = StyleSheet.create({
   wrap: {
     gap: spacing[8],
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[4],
+  },
   label: {
+    flexShrink: 1,
     fontFamily: typography.family[600],
     fontSize: typography.size[13],
     color: colors.ink,
