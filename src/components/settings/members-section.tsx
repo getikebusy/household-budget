@@ -1,12 +1,13 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { cancelInvite, removePartner, sendInvite, usePendingInvite, type HouseholdMember } from '../../data/household';
 import { useSetPartnerName } from '../../data/settings';
-import { colors, radius, spacing, typography } from '../../theme/tokens';
+import { colors, spacing, typography } from '../../theme/tokens';
 import { Avatar } from '../avatar';
 import { Chip } from '../chip';
+import { ConfirmDialog } from '../confirm-dialog';
 import { PrimaryButton } from '../primary-button';
 import { SecondaryButton } from '../secondary-button';
 import { TextField } from '../text-field';
@@ -122,29 +123,19 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
       {isPrimary && partner ? (
         <TextField label="Partner display name" value={partnerName} onChangeText={setPartnerName} maxLength={30} />
       ) : null}
-      {isPrimary && partner && confirming !== 'remove' ? (
+      {isPrimary && partner ? (
         <SecondaryButton title="Remove partner" onPress={() => setConfirming('remove')} />
       ) : null}
-      {isPrimary && partner && confirming === 'remove' ? (
-        <View style={styles.confirm}>
-          <Text style={styles.confirmTitle}>Remove {partner.display_name}?</Text>
-          <Text style={styles.meta}>
-            This deletes their membership, take-home, and private budget lines. Joint transactions stay. You can
-            send a new invite afterwards.
-          </Text>
-          <View style={styles.confirmActions}>
-            <SecondaryButton title="Keep partner" disabled={removing} onPress={() => setConfirming(null)} />
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Remove ${partner.display_name}`}
-              disabled={removing}
-              onPress={() => void runRemove()}
-              style={({ pressed }) => [styles.dangerButton, pressed ? styles.dangerPressed : null, removing ? styles.disabled : null]}>
-              <Text style={styles.dangerLabel}>{removing ? 'Removing…' : 'Remove partner'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      ) : null}
+      <ConfirmDialog
+        visible={confirming === 'remove' && Boolean(partner)}
+        title={partner ? `Remove ${partner.display_name}?` : 'Remove partner?'}
+        message="This deletes their membership, take-home, and private budget lines. Joint transactions stay. You can send a new invite afterwards."
+        confirmLabel="Remove partner"
+        cancelLabel="Keep partner"
+        loading={removing}
+        onConfirm={() => void runRemove()}
+        onCancel={() => setConfirming(null)}
+      />
       {isPrimary && !partner ? (
         <View style={styles.invite}>
           <TextField
@@ -157,26 +148,19 @@ export function MembersSection({ members, isPrimary, onSaved }: MembersSectionPr
           />
           {pendingEmail ? <Text style={styles.meta}>An invite is waiting for {pendingEmail}.</Text> : null}
           <PrimaryButton title={inviteTitle} loading={sending} disabled={!email.trim()} onPress={() => void invite()} />
-          {pendingEmail && confirming !== 'cancel' ? (
+          {pendingEmail ? (
             <SecondaryButton title="Cancel invite" onPress={() => setConfirming('cancel')} />
           ) : null}
-          {pendingEmail && confirming === 'cancel' ? (
-            <View style={styles.confirm}>
-              <Text style={styles.confirmTitle}>Cancel this invite?</Text>
-              <Text style={styles.meta}>{pendingEmail} will not be able to join with the current link.</Text>
-              <View style={styles.confirmActions}>
-                <SecondaryButton title="Keep invite" disabled={removing} onPress={() => setConfirming(null)} />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel invite"
-                  disabled={removing}
-                  onPress={() => void runCancelInvite()}
-                  style={({ pressed }) => [styles.dangerButton, pressed ? styles.dangerPressed : null, removing ? styles.disabled : null]}>
-                  <Text style={styles.dangerLabel}>{removing ? 'Cancelling…' : 'Cancel invite'}</Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : null}
+          <ConfirmDialog
+            visible={confirming === 'cancel' && Boolean(pendingEmail)}
+            title="Cancel this invite?"
+            message={`${pendingEmail} will not be able to join with the current link.`}
+            confirmLabel="Cancel invite"
+            cancelLabel="Keep invite"
+            loading={removing}
+            onConfirm={() => void runCancelInvite()}
+            onCancel={() => setConfirming(null)}
+          />
         </View>
       ) : null}
     </SectionFrame>
@@ -206,38 +190,5 @@ const styles = StyleSheet.create({
   },
   invite: {
     gap: spacing[12],
-  },
-  confirm: {
-    gap: spacing[8],
-    padding: spacing[12],
-    borderRadius: radius.input,
-    backgroundColor: colors.badBg,
-  },
-  confirmTitle: {
-    fontFamily: typography.family[700],
-    fontSize: typography.size[15],
-    color: colors.ink,
-  },
-  confirmActions: {
-    gap: spacing[8],
-  },
-  dangerButton: {
-    minHeight: 44,
-    backgroundColor: colors.danger,
-    borderRadius: radius.input,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing[16],
-  },
-  dangerPressed: {
-    opacity: 0.85,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  dangerLabel: {
-    fontFamily: typography.family[700],
-    fontSize: typography.size[15],
-    color: colors.surface,
   },
 });
