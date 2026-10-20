@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { router, type Href } from 'expo-router';
+import { router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, Text } from 'react-native';
@@ -9,7 +9,8 @@ import { AuthCard } from '../../src/components/auth-card';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { TextField } from '../../src/components/text-field';
 import { TextLink } from '../../src/components/text-link';
-import { beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
+import { appOrigin, beginLoginVerification, cancelLoginVerification, sendLoginCode } from '../../src/data/auth';
+import { savePendingInviteToken } from '../../src/lib/pending-invite';
 import { emailSchema, friendlyAuthError, passwordSchema } from '../../src/lib/auth-schema';
 import { supabase } from '../../src/lib/supabase';
 import { colors, typography } from '../../src/theme/tokens';
@@ -28,6 +29,8 @@ const schema = z
 type FormValues = z.infer<typeof schema>;
 
 export default function SignUpScreen() {
+  const params = useLocalSearchParams<{ invite?: string | string[] }>();
+  const inviteToken = Array.isArray(params.invite) ? params.invite[0] : params.invite;
   const [formError, setFormError] = useState<string | null>(null);
   const {
     control,
@@ -40,10 +43,14 @@ export default function SignUpScreen() {
 
   async function onSubmit(values: FormValues) {
     setFormError(null);
+    if (inviteToken) {
+      await savePendingInviteToken(inviteToken);
+    }
     beginLoginVerification();
     const { error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
+      options: { emailRedirectTo: `${appOrigin()}/sign-in` },
     });
     if (error) {
       cancelLoginVerification();
@@ -53,7 +60,7 @@ export default function SignUpScreen() {
     try {
       const result = await sendLoginCode();
       if (result.alreadyVerified) {
-        router.replace('/' as Href);
+        router.replace((inviteToken ? `/invite/${inviteToken}` : '/') as Href);
         return;
       }
     } catch (sendError) {
@@ -63,7 +70,7 @@ export default function SignUpScreen() {
         return;
       }
     }
-    router.replace('/verify' as Href);
+    router.replace((inviteToken ? `/verify?invite=${encodeURIComponent(inviteToken)}` : '/verify') as Href);
   }
 
   return (

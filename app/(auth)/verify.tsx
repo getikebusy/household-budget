@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { router, type Href } from 'expo-router';
 
 import { AuthCard } from '../../src/components/auth-card';
 import { CodeInput } from '../../src/components/code-input';
 import { PrimaryButton } from '../../src/components/primary-button';
 import { AuthFlowError, sendLoginCode, signOut, useSession, verifyLoginCode } from '../../src/data/auth';
 import { queryClient } from '../../src/lib/query-client';
+import { getPendingInviteToken } from '../../src/lib/pending-invite';
 import { colors, spacing, typography } from '../../src/theme/tokens';
 
 export default function VerifyScreen() {
@@ -37,6 +39,10 @@ export default function VerifyScreen() {
     try {
       await verifyLoginCode(nextCode);
       await queryClient.invalidateQueries({ queryKey: ['session-verified'] });
+      const inviteToken = await getPendingInviteToken();
+      if (inviteToken) {
+        router.replace(`/invite/${inviteToken}` as Href);
+      }
     } catch (caught) {
       submittedRef.current = null;
       const payload = caught instanceof AuthFlowError ? caught.payload : undefined;

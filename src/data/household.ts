@@ -125,3 +125,19 @@ export async function acceptInvite(params: {
   await queryClient.invalidateQueries();
   return data;
 }
+
+export async function removePartner(): Promise<void> {
+  const { error } = await supabase.rpc('remove_partner');
+  if (error) {
+    throw error;
+  }
+  await queryClient.invalidateQueries();
+}
+
+export async function cancelInvite(): Promise<void> {
+  const { error } = await supabase.rpc('cancel_invite');
+  if (error) {
+    throw error;
+  }
+  await queryClient.invalidateQueries({ queryKey: ['invites'] });
+}
