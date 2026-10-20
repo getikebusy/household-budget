@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { supabase } from '../lib/supabase';
 import type { Tables, TablesUpdate } from '../types/database';
-import { useSession } from './auth';
+import { invokeFunction, useSession } from './auth';
 import { primaryOnlyError, primaryOnlyIfEmpty } from './errors';
 import { useMyMembership } from './household';
 
@@ -141,6 +141,19 @@ export function useFxQuotes() {
         }
       }
       return latest;
+    },
+  });
+}
+
+export type FxSyncResult = { ok: true; skipped: boolean };
+
+export function useSyncFxRates() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => invokeFunction<FxSyncResult>('fx-sync'),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['fx-rates'] });
     },
   });
 }

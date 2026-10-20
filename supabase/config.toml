@@ -402,6 +402,9 @@ verify_jwt = true
 [functions.send-invite]
 verify_jwt = true
 
+[functions.fx-sync]
+verify_jwt = true
+
 [functions.fx-refresh]
 verify_jwt = false
 
